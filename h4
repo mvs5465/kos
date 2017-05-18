@@ -1,0 +1,64 @@
+// Main method
+main().
+
+
+Function main {
+  Print "Countdown started!".
+  countdown(5).
+  liftoff().
+  Print "Liftoff!".
+  Wait 1.
+
+  Until alt:radar > 7500 {
+    If stage:solidfuel < 0.1 {
+      Stage.
+    }
+  }
+  
+  Print "Beginning gravity turn".
+  gravityTurn(1).
+  Print "Gravity turn complete.".
+  atmBurn().
+  Print "Exited atmosphere.".
+}
+
+Function atmBurn {
+  
+  Set s1 to ship:velocity:surface:mag.
+
+  Until alt:radar < 30000 {
+    If s1 > 700 {
+      Set throttle to throttle * 0.5.
+    } else {
+      Set throttle to throttle * 1.5.
+    }
+    Wait 0.1.
+  }
+}
+
+Function gravityTurn {
+  Parameter step.
+
+  Set ang to 90.
+  Until ang < 45 {
+    Lock steering to Heading(90, ang).
+    Wait step.
+    Set ang to ang - 5.
+  }
+}
+
+Function liftoff {
+  Lock throttle to 1.
+  Lock steering to Heading(270,90).
+  Stage.
+}
+
+Function countdown {
+  Parameter t.
+  
+  Until t < 1 {
+    Print t.
+    Set t to t - 1.
+    Wait 1.
+  }
+}

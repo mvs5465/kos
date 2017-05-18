@@ -1,0 +1,84 @@
+Clearscreen.
+
+// Vars
+Set cd to 5. // prelaunch cd
+Set stcd to 3. // engine stab. period
+
+Lock s1 to ship:velocity:surface:mag.
+
+// Countdown
+Lock steering to Heading(90, 90).
+Until cd < 1 {
+  Print cd.
+  Set cd to cd - 1.
+  Wait 1.
+}
+
+// Launch stabilization pre-phase
+Lock throttle to 0.1.
+Stage.
+Print "Engines stabilizing...".
+Until stcd < 1 {
+  Print stcd.
+  Set stcd to stcd - 1.
+  Wait 1.
+}
+Lock throttle to 1.0.
+
+// Liftoff
+Print "Liftoff! Stage 1...".
+
+Wait until alt:radar > 8000.
+
+// Gravity Turning
+Print "Beginning gravity turn.".
+Lock steering to Heading(90,80).
+Wait 4.
+Lock steering to Heading(90,70).
+Wait 4.
+Lock steering to Heading(90,60).
+Wait 4.
+Lock steering to Heading(90,50).
+Wait 2.
+Lock steering to Heading(90,45).
+
+// Low speed atmospheric exit
+Until apoapsis > 30000 {
+  
+  If s1 > 500 {
+    Lock throttle to 0.25.
+  } else {
+    Lock throttle to 1.
+  }
+  Wait 0.01.
+}
+
+Print "Burning to 75000m".
+
+// High speed apoapsis burn
+Until apoapsis > 75000 {
+
+  If s1 < 2200 {
+    Lock throttle to 1.
+  } else {
+    Lock throttle to 0.
+  }
+  Wait 0.01.
+}
+
+Print "Burn complete.".
+
+Lock throttle to 0.
+Wait until eta:apoapsis < 10.
+
+// Apoapsis routine
+Print "Approaching apoapsis.".
+
+Print "Steering lock engaged. Starting circularization burn.".
+Lock steering to Heading(90,10).
+Set throttle to 1.
+Wait until periapsis > 75000.
+Set throttle to 0.
+
+Print "LEO orbit achieved. Program ending in 20 seconds".
+Wait 20.

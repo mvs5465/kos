@@ -1,0 +1,69 @@
+Set t to 0.
+Lock throttle to t.
+Lock steering to Up.
+
+Set cd to 5.
+Until cd < 0 {
+  print cd.
+  set cd to cd - 1.
+  wait 1.
+}
+
+Stage.
+
+Wait until ship:solidfuel = 0.
+
+print "Launching stage 1".
+
+Stage.
+
+Wait until ship:velocity:surface:mag < 50.
+
+Lock steering to ship:srfretrograde.
+Print "Locked steering to retrograde.".
+
+Wait until alt:radar / ship:velocity:surface:mag < 51.
+Print "Beginning controlled descent at 50 m/s".
+
+Until alt:radar < 300 {
+  if ship:velocity:surface:mag > 100 {
+    Lock t to 1. 
+  } else {
+    Lock t to 0.
+  } 
+  Wait 0.1.
+}
+
+Until alt:radar < 200 {
+  if ship:velocity:surface:mag > 50 {
+    Lock t to 1. 
+  } else {
+    Lock t to 0.
+  } 
+  Wait 0.1.
+}
+
+Gear on.
+
+Until alt:radar < 100 {
+  if ship:velocity:surface:mag > 25 {
+    Lock t to 1. 
+  } else {
+    Lock t to 0.
+  } 
+  Wait 0.1.
+}
+
+Until alt:radar < 20 {
+  if ship:velocity:surface:mag > 5 {
+    Lock t to 1. 
+  } else {
+    Lock t to 0.
+  } 
+  Wait 0.1.
+}
+
+wait until status = "landed".
+Lock t to 0.
+Wait 20.
+Print "--End--".

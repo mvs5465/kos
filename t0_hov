@@ -1,0 +1,129 @@
+// Init
+Clearscreen.
+Lock steering to Heading(90,0).
+
+// Turn on active control engines
+Print "Activating major engines.".
+FOR eng IN SHIP:PARTSDUBBED("liquidEngine") {
+    print "An engine exists with ISP = " + eng:isp.
+    eng:activate().
+    Set eng:thrustlimit to 100.
+}.
+
+// Turn on passive engines
+Print "Activating minor engines.".
+FOR eng IN SHIP:PARTSDUBBED("miniJetEngine") {
+    print "An engine exists with ISP = " + eng:isp.
+    eng:activate().
+    Set eng:thrustlimit to 100.
+}.
+
+// Hover
+Set stopped to False.
+Set increment to 1.
+Print "Attempting to stabilize flight...".
+Gear off.
+Until stopped = True {
+  Set a0 to alt:radar.
+  Wait 0.1.
+  Set a1 to alt:radar.
+
+  If stage:oxidizer < 700 {
+    Print "Oxidizer low, landing...".
+    Land().
+    Set stopped to True.
+  }
+
+  Set thrustIncr to 20/abs(a0 - a1).
+
+  If (a0 - a1) > 0 {
+    increaseMinorThrottle(thrustIncr).
+  } else {
+    decreaseMinorThrottle(thrustIncr).
+  }
+}
+
+Lock throttle to 0.
+Set endt to 10.
+Until endt < 1 {
+  Print "Program ending in " + endt.
+  Wait 1.
+  Set endt to endt - 1.
+}
+////// End ///////
+//////////////////
+
+///////// Functions /////////
+Function land {
+
+  Gear on.
+
+  Brakes on.
+
+  FOR eng IN SHIP:PARTSDUBBED("miniJetEngine") {
+      Set eng:thrustlimit to 0.
+  }.
+
+  Set a0 to alt:radar.
+  Wait 0.1.
+  Set a1 to alt:radar.
+
+  Set thrustIncr to 20/abs(a0 - a1).
+
+  Until alt:radar < 300 {
+    If ship:verticalspeed < -80 {
+      increaseMinorThrottle(thrustIncr).
+    } else {
+      decreaseMinorThrottle(thrustIncr).
+    }
+  }
+
+  Until alt:radar < 100 {
+    If ship:verticalspeed < -30 {
+      increaseMinorThrottle(thrustIncr).
+    } else {
+      decreaseMinorThrottle(thrustIncr).
+    }
+  }
+
+  Until alt:radar < 20 {
+    If ship:verticalspeed < -8 {
+      increaseMinorThrottle(thrustIncr).
+    } else {
+      decreaseMinorThrottle(thrustIncr).
+    }
+  }
+
+  Until alt:radar < 10 {
+    If ship:verticalspeed < -1 {
+      increaseMinorThrottle(thrustIncr).
+    } else {
+      decreaseMinorThrottle(thrustIncr).
+    }
+  }
+
+  Lock throttle to 0.
+  Print "Landed.".
+
+}
+
+Function decreaseMinorThrottle {
+  Parameter incr.
+
+  FOR eng IN SHIP:PARTSDUBBED("liquidEngine") {
+      Set eng:thrustlimit to eng:thrustlimit - incr.
+  }.
+//  FOR eng IN SHIP:PARTSDUBBED("turboJet") {
+//      Set eng:thrustlimit to eng:thrustlimit - incr.
+//  }.
+}
+
+Function increaseMinorThrottle {
+  Parameter incr.
+  FOR eng IN SHIP:PARTSDUBBED("liquidEngine") {
+      Set eng:thrustlimit to eng:thrustlimit + incr.
+  }.
+//  FOR eng IN SHIP:PARTSDUBBED("turboJet") {
+//      Set eng:thrustlimit to eng:thrustlimit + incr.
+//  }.
+}

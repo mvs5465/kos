@@ -1,0 +1,90 @@
+CLEARSCREEN.
+
+SET SASMODE TO "STABILITYASSIST".
+
+SET countdown TO  6.
+SET enginesfire TO 3.
+SET release TO 0.
+
+PRINT "COUNTDOWN INITIATED: T-" + countdown.
+
+SET x to countdown.
+UNTIL x < enginesfire {
+  PRINT "STARTING ENGINES IN T-" + (x - enginesfire).
+  set x to x - 1.
+  WAIT 1.
+}
+
+LOCK THROTTLE TO 0.
+PRINT "MAIN ENGINES STARTING.".
+STAGE.
+
+
+SET x to enginesfire.
+UNTIL x < 0 {
+  PRINT "LAUNCH IN " + (x-0).
+
+  LOCK THROTTLE to (enginesfire - x)/(enginesfire*10).
+  set x to x-1.
+  WAIT 1.
+}
+
+LOCK THROTTLE TO 1.
+LOCK STEERING TO Up.
+STAGE.
+PRINT "LIFTOFF!!!".
+PRINT "STAGE 1 TRACKING COMMENCING...".
+
+WAIT 5.
+
+
+UNTIL SHIP:ALTITUDE > 8000 {
+  LOCK STEERING TO Up.
+  if SHIP:VELOCITY:SURFACE:MAG > 300 {
+    LOCK THROTTLE to 0.1.
+  } else {
+    LOCK THROTTLE to 1.0.
+  }
+
+  CLEARSCREEN.
+  PRINT "STAGE 1...".
+  PRINT FLOOR(SHIP:ALTITUDE) + " / 8000".
+  PRINT "STEERING LOCKED TO Up".
+  WAIT 1.
+}
+
+LOCK STEERING TO HEADING(90, 45).
+
+UNTIL APOAPSIS > 75000 { 
+  IF SHIP:ALTITUDE < 30000 {
+    IF SHIP:VELOCITY:SURFACE:MAG > 500 {
+      LOCK THROTTLE TO 0.5.
+    } ELSE {
+      LOCK THROTTLE TO 1.0.
+    }
+  }
+}
+
+LOCK THROTTLE TO 0.
+LOCK STEERING TO HEADING(90, 0).
+
+WAIT UNTIL ETA:APOAPSIS < 10.
+
+UNTIL SHIP:LIQUIDFUEL = 0 {
+  IF PERIAPSIS < 75000 { 
+    LOCK THROTTLE TO 1.0.
+  } 
+
+  CLEARSCREEN.
+  PRINT "STAGE 2.".
+  PRINT "LIQUIDFUEL REMAINING: " + SHIP:LIQUIDFUEL.
+  PRINT "STEERING LOCKED TO 60 DEG".
+
+  WAIT 1.0.
+}
+
+WAIT 10.
+PRINT "Launch routine complete. Deploying remaining stages. Altitude = " + FLOOR(SHIP:ALTITUDE) + "m.".
+STAGE.
+STAGE.
+STAGE.
