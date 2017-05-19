@@ -1,6 +1,8 @@
 // Init
 Clearscreen.
-Lock steering to Heading(90,0).
+Lock steering to Heading(90,90).
+
+Lock vertSpeed to ship:verticalspeed.
 
 // Turn on active control engines
 Print "Activating major engines.".
@@ -18,28 +20,41 @@ FOR eng IN SHIP:PARTSDUBBED("miniJetEngine") {
     Set eng:thrustlimit to 100.
 }.
 
-// Hover
+// Begin Hover routine.
 Set stopped to False.
 Set increment to 1.
 Print "Attempting to stabilize flight...".
 Gear off.
-Until stopped = True {
-  Set a0 to alt:radar.
-  Wait 0.1.
-  Set a1 to alt:radar.
 
-  If stage:oxidizer < 700 {
-    Print "Oxidizer low, landing...".
-    Land().
-    Set stopped to True.
+Set vel0 to vertSpeed.
+Wait 0.1.
+Set vel1 to vertSpeed.
+
+Until stopped = True {
+
+  // Capture sequential current position, velocity, and acceleration values.
+  Set pos0 to alt:radar.
+  Set vel0 to vertSpeed.
+  Set acc0 to (vel1 - vel0)/(0.1).
+  Wait 0.1.
+  Set pos1 to alt:radar.
+  Set vel1 to (pos1-pos0)/0.1.
+  Set acc1 to (vel1 - vel0)/(0.1).
+
+  Set jerk to acc1 - acc0.
+
+  // Increment thrust by the rate of change of acceleration.
+  Print vertSpeed.
+  If vertSpeed > 0 {
+    incrementMinorThrottle(-abs(acc1)).
+  } else {
+    incrementMinorThrottle(abs(acc1)).
   }
 
-  Set thrustIncr to 20/abs(a0 - a1).
-
-  If (a0 - a1) > 0 {
-    increaseMinorThrottle(thrustIncr).
-  } else {
-    decreaseMinorThrottle(thrustIncr).
+  If resourcePercent("oxidizer") < 25 {
+    Print "Landing...".
+    Land().
+    Set stopped to True.
   }
 }
 
@@ -53,77 +68,88 @@ Until endt < 1 {
 ////// End ///////
 //////////////////
 
+
+/////////////////////////////
 ///////// Functions /////////
+
+////////////////////////////////////
+// Returns 'resName' as %.
+Function resourcePercent {
+  Parameter resName.
+
+  Set resList to ship:resources.
+  For res in resList {
+    If res:name = resName {
+      Set resCur to res:amount.
+      Set resMax to res:capacity.
+    }
+  }
+  return (resCur/ResMax)*100.
+}
+
+////////////////////////////////////
+// Adds 'incr to current thrustlimit.
+Function incrementMinorThrottle {
+  Parameter incr.
+
+  For eng in ship:partsdubbed("liquidEngine") {
+      Set eng:thrustlimit to eng:thrustlimit + incr.
+  }.
+}
+
+////////////////////////////////////
+// Decreases thrust until landed
 Function land {
 
-  Gear on.
-
-  Brakes on.
-
-  FOR eng IN SHIP:PARTSDUBBED("miniJetEngine") {
+  For eng in ship:partsdubbed("miniJetEngine") {
+      Set eng:thrustlimit to 0.
+  }.
+  For eng in ship:partsdubbed("liquidEngine") {
       Set eng:thrustlimit to 0.
   }.
 
-  Set a0 to alt:radar.
-  Wait 0.1.
-  Set a1 to alt:radar.
+  Wait until alt:radar < 1000.
+  lockSpeedUntilAltitude(-100, 500).
+  Gear on.
+  Brakes on.
 
-  Set thrustIncr to 20/abs(a0 - a1).
-
-  Until alt:radar < 300 {
-    If ship:verticalspeed < -80 {
-      increaseMinorThrottle(thrustIncr).
-    } else {
-      decreaseMinorThrottle(thrustIncr).
-    }
-  }
-
-  Until alt:radar < 100 {
-    If ship:verticalspeed < -30 {
-      increaseMinorThrottle(thrustIncr).
-    } else {
-      decreaseMinorThrottle(thrustIncr).
-    }
-  }
-
-  Until alt:radar < 20 {
-    If ship:verticalspeed < -8 {
-      increaseMinorThrottle(thrustIncr).
-    } else {
-      decreaseMinorThrottle(thrustIncr).
-    }
-  }
-
-  Until alt:radar < 10 {
-    If ship:verticalspeed < -1 {
-      increaseMinorThrottle(thrustIncr).
-    } else {
-      decreaseMinorThrottle(thrustIncr).
-    }
+  Until (alt:radar < 10) {
+    Print "Locking speed-to-altitude: " + floor(-sqrt(alt:radar)) + ":" + floor(alt:radar/2).
+    lockSpeedUntilAltitude(-sqrt(alt:radar), alt:radar/2).
   }
 
   Lock throttle to 0.
   Print "Landed.".
-
 }
 
-Function decreaseMinorThrottle {
-  Parameter incr.
+//////////////////////////////
+// For descent
+Function lockSpeedUntilAltitude {
+  Parameter targetSpeed.
+  Parameter destAlt.
 
-  FOR eng IN SHIP:PARTSDUBBED("liquidEngine") {
-      Set eng:thrustlimit to eng:thrustlimit - incr.
-  }.
-//  FOR eng IN SHIP:PARTSDUBBED("turboJet") {
-//      Set eng:thrustlimit to eng:thrustlimit - incr.
-//  }.
+  Until alt:radar < destAlt {
+    Set thrustIncr to magicTorque()*0.25.
+    Set a0 to alt:radar.
+    Wait 0.1.
+    Set a1 to alt:radar.
+    If (a1 - a0)/0.1 > targetSpeed {
+      incrementMinorThrottle(-thrustIncr).
+    } else {
+      incrementMinorThrottle(thrustIncr).
+    }
+  }
 }
 
-Function increaseMinorThrottle {
-  Parameter incr.
-  FOR eng IN SHIP:PARTSDUBBED("liquidEngine") {
-      Set eng:thrustlimit to eng:thrustlimit + incr.
-  }.
-//  FOR eng IN SHIP:PARTSDUBBED("turboJet") {
-//      Set eng:thrustlimit to eng:thrustlimit + incr.
-//  }.
+////////////////////////////////////
+// Good number for thrust increment.
+Function magicTorque {
+  Set pos0 to alt:radar.
+  Set vel0 to vertSpeed.
+  Set acc0 to (vel1 - vel0)/(0.1).
+  Wait 0.1.
+  Set pos1 to alt:radar.
+  Set vel1 to (pos1-pos0)/0.1.
+  Set acc1 to (vel1 - vel0)/(0.1).
+  return abs(acc1).
 }
