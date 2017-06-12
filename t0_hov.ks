@@ -1,6 +1,7 @@
 // Init
 Clearscreen.
-Lock steering to Heading(90,90).
+SAS off.
+Lock steering to Heading(0,90).
 
 Lock vertSpeed to ship:verticalspeed.
 
@@ -36,22 +37,33 @@ Until stopped = True {
   Set pos0 to alt:radar.
   Set vel0 to vertSpeed.
   Set acc0 to (vel1 - vel0)/(0.1).
+  Set lat0 to ship:latitude.
+  Set lon0 to ship:longitude.
   Wait 0.1.
   Set pos1 to alt:radar.
   Set vel1 to (pos1-pos0)/0.1.
   Set acc1 to (vel1 - vel0)/(0.1).
+  Set lat1 to ship:latitude.
+  Set lon1 to ship:longitude.
+
+  Set northv to lat1-lat0.
+  Set eastv to lon1-lon0.
 
   Set jerk to acc1 - acc0.
 
+  If (northv + eastv) > 0.000001 {
+    //Print (northv + eastv).
+    //slowLat().
+  }
+
   // Increment thrust by the rate of change of acceleration.
-  Print vertSpeed.
   If vertSpeed > 0 {
     incrementMinorThrottle(-abs(acc1)).
   } else {
     incrementMinorThrottle(abs(acc1)).
   }
 
-  If resourcePercent("oxidizer") < 25 {
+  If resourcePercent("oxidizer") < 50 {
     Print "Landing...".
     Land().
     Set stopped to True.
@@ -101,6 +113,8 @@ Function incrementMinorThrottle {
 // Decreases thrust until landed
 Function land {
 
+  Lock steering to srfretrograde.
+
   For eng in ship:partsdubbed("miniJetEngine") {
       Set eng:thrustlimit to 0.
   }.
@@ -108,15 +122,19 @@ Function land {
       Set eng:thrustlimit to 0.
   }.
 
-  Wait until alt:radar < 1000.
-  lockSpeedUntilAltitude(-100, 500).
-  Gear on.
   Brakes on.
+  Until (alt:radar < 2000) {
+    Print "Locking speed-to-altitude: " + floor(-sqrt(alt:radar)*4) + ":" + floor(alt:radar*0.67).
+    lockSpeedUntilAltitude(-sqrt(alt:radar)*4, alt:radar*0.67).
+  }
+  Gear on.
 
   Until (alt:radar < 10) {
     Print "Locking speed-to-altitude: " + floor(-sqrt(alt:radar)) + ":" + floor(alt:radar/2).
     lockSpeedUntilAltitude(-sqrt(alt:radar), alt:radar/2).
   }
+
+  Lock steering to Up.
 
   Lock throttle to 0.
   Print "Landed.".
@@ -129,11 +147,11 @@ Function lockSpeedUntilAltitude {
   Parameter destAlt.
 
   Until alt:radar < destAlt {
-    Set thrustIncr to magicTorque()*0.25.
+    Set thrustIncr to magicTorque().
     Set a0 to alt:radar.
-    Wait 0.1.
+    Wait 0.01.
     Set a1 to alt:radar.
-    If (a1 - a0)/0.1 > targetSpeed {
+    If vertSpeed > -abs(targetSpeed) {
       incrementMinorThrottle(-thrustIncr).
     } else {
       incrementMinorThrottle(thrustIncr).
@@ -146,10 +164,24 @@ Function lockSpeedUntilAltitude {
 Function magicTorque {
   Set pos0 to alt:radar.
   Set vel0 to vertSpeed.
-  Set acc0 to (vel1 - vel0)/(0.1).
-  Wait 0.1.
+  Set acc0 to (vel1 - vel0)/(0.01).
+  Wait 0.01.
   Set pos1 to alt:radar.
-  Set vel1 to (pos1-pos0)/0.1.
-  Set acc1 to (vel1 - vel0)/(0.1).
+  Set vel1 to (pos1-pos0)/0.01.
+  Set acc1 to (vel1 - vel0)/(0.01).
   return abs(acc1).
+}
+
+////////////////////////////////////
+// Kills lateral movement via GPS
+Function slowLat {
+  Set lat0 to ship:latitude.
+  Set lon0 to ship:longitude.
+  Wait 0.1.
+  Set lat1 to ship:latitude.
+  Set lon1 to ship:longitude.
+  Set northv to lat1-lat0.
+  Set eastv to lon1-lon0.
+  Lock steering to Up + R(1000*northv, 1000*eastv, 0).
+  Print (1000*northv) + ":" + (1000*eastv).
 }
