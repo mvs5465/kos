@@ -33,7 +33,7 @@ Function LM_getTotalAcceleration {
   // ...
   // Acceleration = (Thrust - (mass*gravity)) / Mass
 
-  Set tAcc to (ship:maxthrust + (ship:mass*ship:sensors:grav:mag))/ship:mass.
+  Set tAcc to (ship:maxthrust - (ship:mass*ship:sensors:grav:mag))/ship:mass.
 
   Return tAcc.
 }
