@@ -20,6 +20,7 @@ Function LM_getStoppingDistance {
 
   Set dist to (vf^2 - vi^2)/(2*LM_getTotalAcceleration()).
 
+  llog(LOG_VV, "LM_getStoppingDistance(dist)[" + 0.1*floor(dist*10) + "m]".).
   Return abs(dist).
 }
 
@@ -33,7 +34,26 @@ Function LM_getTotalAcceleration {
   // ...
   // Acceleration = (Thrust - (mass*gravity)) / Mass
 
-  Set tAcc to (ship:maxthrust + (ship:mass*ship:sensors:grav:mag))/ship:mass.
+  Set tAcc to (ship:maxthrust - (ship:mass*ship:sensors:grav:mag))/ship:mass.
 
+  llog(LOG_VV, "LM_getTotalAcceleration(net acc)[" + 0.1*floor(tAcc*10) + "m/s^2]".).
   Return tAcc.
+}
+
+
+// calculate time to impact
+Function LM_calcImpactTime {
+  Set v0 to abs(ship:verticalspeed).
+  Wait TICK_TIME.
+  Set v1 to abs(ship:verticalspeed).
+  Set a to abs((v1 - v0)/TICK_TIME).
+
+  // vf = impact velocity
+  Set vf to sqrt(v1^2 + 2*a*alt:radar).
+
+  Set t0 to (2*alt:radar)/(v0 + vf).
+
+  llog(LOG_VV, "LM_calcImpactTime(impact velocity)[" + 0.1*floor(vf*10) + "m/s]".).
+  llog(LOG_VV, "LM_calcImpactTime(impact time)[" + 0.1*floor(t0*10) + "s]".).
+  Return t0.
 }
