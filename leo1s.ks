@@ -1,8 +1,9 @@
+run lib_launch_help.
 
 // Init and check
 Set LAUNCH_STEEPNESS to 0.13.
 Set TARGET_APOPSIS to 75000.
-Set ETA_MARGIN to 5. // seconds to eta to fire (stronger engines get closer)
+Set ETA_MARGIN to 15. // seconds to eta to fire (stronger engines get closer)
 main().
 
 
@@ -18,7 +19,7 @@ Function main {
   //prepEngines().
 
   // Countdown
-  countdown(5).
+  LL_countdown(5).
 
   // Launch up until alt > 1km.
   // Check if we need to do a stage:

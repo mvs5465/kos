@@ -1,17 +1,16 @@
+run lib_launch_help.
+run lib_math.
+run lib_log.
 
 // Init
-Set TEST_LAUNCH_HEIGHT to 2500.
+Set LOG_LEVEL to LOG_V.
+
+Set TEST_LAUNCH_HEIGHT to 2000.
 Set ENGINE_NAME to "engine".
 Set TICK_TIME to 0.01. // global tick time (lower = more precise)
 Set ENG_THROTTLEUP_TIME to 0.1. // time it takes engines to throttle 0-->100%
-Set peakEngineAcceleration to 9.8. // mostly to avoid dividing by 0
 
 main().
-
-
-
-
-
 
 //////////////////
 ////// Main //////
@@ -20,45 +19,43 @@ Function main {
   SAS off.
   Lock throttle to 1.
 
-  if (alt:radar < 30) {
-    launch().
-    Lock throttle to 0.
-    Wait until altitude > apoapsis-5.
-    Wait 1.
-  } else {
-    Lock steering to srfretrograde.
-    Wait 1.
-  }
+  LL_countDown(3).
+  LL_launchIfLanded(500).
 
-
-  // Mainloop
-  Set waitInterval to 30.
-  Until alt:radar < 300 {
-    Print "-- " + floor(alt:radar) + "m --".
-
-    Set vert0 to ship:verticalspeed.
-    Set timeLeft to calcBurnTime().
-    Set vert1 to ship:verticalspeed.
-    Set acc to (vert1 - vert0) / TICK_TIME.
-
-    Set waitInterval to abs(timeLeft)/3.
-
-    Print "time left: " + 0.1*floor(timeLeft*10).
-    Print "interval: " + 0.1*floor(waitInterval*10).
-
-    if waitInterval < 2 {
-      Print "lets take a guess here...".
-      Wait abs(timeLeft).
-      Print "now!".
-
-      land().
-
-      Return.
-    }.
-
-    Wait waitInterval.
-  }
+  Wait until alt:radar < (apoapsis - 5).
+  Wait 2.
+  land().
 }
+
+
+// Mainloop
+//   Set waitInterval to 30.
+//   Until alt:radar < 300 {
+//     Print "-- " + floor(alt:radar) + "m --".
+//
+//     Set vert0 to ship:verticalspeed.
+//     Set timeLeft to calcBurnTime().
+//     Set vert1 to ship:verticalspeed.
+//     Set acc to (vert1 - vert0) / TICK_TIME.
+//
+//     Set waitInterval to abs(timeLeft)/3.
+//
+//     Print "time left: " + 0.1*floor(timeLeft*10).
+//     Print "interval: " + 0.1*floor(waitInterval*10).
+//
+//     if waitInterval < 2 {
+//       Print "lets take a guess here...".
+//       Wait abs(timeLeft).
+//       Print "now!".
+//
+//       land().
+//
+//       Return.
+//     }.
+//
+//     Wait waitInterval.
+//   }
+
 
 Function land {
 
@@ -74,7 +71,10 @@ Function land {
   Set thr to 1.
   Until alt:radar < stoppingHeight {
 
-    If getStoppingDistance() < alt:radar {
+    Set sDist to LM_getStoppingDistance(TICK_TIME).
+    //Print "stop: " + 0.1*floor(sDist*10) + ", alt: " + 0.1*floor(alt:radar*10).
+
+    If sDist < alt:radar*0.9 {
       Set thr to max(0, thr - 0.1).
     } else {
       Set thr to min(1, thr + 0.1).
@@ -82,65 +82,13 @@ Function land {
     Lock throttle to thr.
   }
 
-
-
   // Actually land
   //Lock throttle to 1.
-  lockSpeedUntilAltitude(stoppingSpeed, cutPowerHeight).
+  LL_lockSpeedUntilAltitude(TICK_TIME, stoppingSpeed, cutPowerHeight).
   Lock throttle to 0.
   Print "Have a nice day!".
   Set SHIP:CONTROL:PILOTMAINTHROTTLE TO 0. // hopefully stop throttle after end
 
-}
-
-Function getStoppingDistance {
-
-  //////////////////////////
-  // d = (vf^2 - vi^2)/(2*a)
-  // vf = final velocity (0)
-  // vi = v1 = initial velocity (v1)
-  // a = accel, d = distance traveled
-
-  Set vf to 0.
-  Set v0 to ship:verticalspeed.
-  Wait TICK_TIME.
-  Set vi to ship:verticalspeed.
-  Set acc to (vi - v0)/TICK_TIME.
-
-  Set peakEngineAcceleration to min(peakEngineAcceleration, abs(acc)).
-
-  Set dist to (vf^2 - vi^2)/(2*peakEngineAcceleration).
-  Set dist to abs(dist).
-
-  Return dist.
-}
-
-Function countDown {
-  Parameter t.
-  Until t = 0 {
-    Set t to t - 1.
-    Wait 1.
-  }
-}
-
-Function lockSpeedUntilAltitude {
-  Parameter targetSpeed.
-  Parameter destAlt.
-
-  Lock throttle to 1.
-  Set thr to 1.
-
-  Until alt:radar < destAlt {
-    Set a0 to alt:radar.
-    Wait TICK_TIME.
-    Set a1 to alt:radar.
-    If -ship:velocity:surface:mag > -abs(targetSpeed) {
-      Set thr to max(0, thr - 0.1).
-    } else {
-      Set thr to min(1, thr + 0.1).
-    }
-    Lock throttle to thr.
-  }
 }
 
 // measure and extrapolate burn time
@@ -186,19 +134,4 @@ Function calcImpactTime {
   Set t0 to (2*alt:radar)/(v0 + vf).
 
   Return t0.
-}
-
-Function setThrustLimit {
-  Parameter lim.
-
-  For eng in ship:partsdubbed(ENGINE_NAME) {
-    Print "eng detected".
-      Set eng:thrustlimit to lim.
-  }.
-}
-
-Function launch {
-  Stage.
-  Lock steering to Up.
-  Wait until alt:radar > TEST_LAUNCH_HEIGHT.
 }
