@@ -1,4 +1,5 @@
 run lib_launch_help.
+run lib_log.
 
 // Init and check
 Set LAUNCH_STEEPNESS to 0.13.

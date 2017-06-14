@@ -3,7 +3,7 @@ run lib_math.
 run lib_log.
 
 // Init
-Set LOG_LEVEL to LOG_VV.
+Set LOG_LEVEL to LOG_V.
 
 Set TEST_LAUNCH_HEIGHT to 500. // (m)
 Set ENGINE_NAME to "engine". // deprecated, prefer throttle control
@@ -19,14 +19,20 @@ main().
 Function main {
   Clearscreen.
   SAS off.
-  Lock throttle to 1.
+  Lock throttle to 0.
 
   LL_countDown(3).
-  LL_launchIfLanded(500).
+
+  Lock steering to UP + R(0,5,0).
+  Gear off.
+  LL_launchIfLanded(TEST_LAUNCH_HEIGHT).
 
   Wait until alt:radar < (apoapsis - 5).
   Wait 2.
   land().
+  llog(LOG_V, "Have a nice day!").
+  Set SHIP:CONTROL:PILOTMAINTHROTTLE TO 0. // hopefully stop throttle after end
+  SAS on.
 }
 
 
@@ -35,19 +41,23 @@ Function main {
 // ~works half the time, all the time~
 Function land {
 
-  Set stoppingHeight to 25. // (m) height to switch to static-speed descent
+  Set stoppingHeight to 35. // (m) height to switch to static-speed descent
+  Set cutPowerHeight to 5. // (m) note the landing pad is ~12m tall
   Set stoppingSpeed to 2. // (m/s) target speed
-  Set cutPowerHeight to 15. // (m) note the landing pad is ~12m tall
 
+
+  llog(LOG_V, "Beginning landing routine.").
   Gear on.
+  Lights on.
+  Lock steering to SRFRETROGRADE.
 
   // Basically, brake so that you hit the ground the same time your speed = 0
-  Lock throttle to 1.
-  Set thr to 1.
+  Lock throttle to 0.
+  Set thr to 0.
   Until alt:radar < stoppingHeight {
     Set sDist to LM_getStoppingDistance(TICK_TIME).
 
-    If sDist < alt:radar*0.9 {  // TODO - remove this constant
+    If (sDist) < alt:radar {  // TODO - remove this constant
       Set thr to max(0, thr - 0.1). // TODO - remove this constant
     } else {
       Set thr to min(1, thr + 0.1). // TODO - remove this constant
@@ -58,9 +68,7 @@ Function land {
   // Regain control and land
   LL_lockSpeedUntilAltitude(TICK_TIME, stoppingSpeed, cutPowerHeight).
   Lock throttle to 0.
-  llog(LOG_V, "Have a nice day!").
-  Set SHIP:CONTROL:PILOTMAINTHROTTLE TO 0. // hopefully stop throttle after end
-
+  llog(LOG_V, "Landed!").
 }
 
 

@@ -13,7 +13,7 @@ Function llog {
   Parameter logLevel.
   Parameter msg.
 
-  if logLevel >= LOG_LEVEL {
+  if logLevel <= LOG_LEVEL {
     Print msg.
   }
 }
