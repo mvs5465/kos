@@ -2,6 +2,67 @@
 // - Helpful collection of functions relevant to launching
 // -
 
+// Circularizes at closer of periapsis or apoapsis
+Function LL_circularize {
+  // 1 Detect if we are closer to periapsis or apoapsis
+  // 2 Wait until closer ETA = 0
+  // 3 Burn while keeping closer one at current height (point up/down)
+  //   until orbits are within 1%.
+
+  llog(LOG_V, "LL_circularize(W...)").
+
+  Lock throttle to 0.
+
+  Set apCloserNode to true.
+
+  // TODO duplicate code
+  If eta:apoapsis < eta:periapsis {
+    Set apCloserNode to true.
+    Lock steering to prograde.
+    llog(LOG_V, "LL_circularize(Waiting for apoapsis...)").
+    Wait until eta:apoapsis < 1.
+  } else {
+    Set apCloserNode to false.
+    Lock steering to retrograde.
+    llog(LOG_V, "LL_circularize(Waiting for periapsis...)").
+    Wait until eta:periapsis < 1.
+  }
+
+
+  llog(LOG_V, "LL_circularize(Circularizing...)").
+  Lock throttle to 1.
+
+  Set strAng to 0.
+  Set a0 to apoapsis.
+  Wait TICK_TIME.
+  Set a1 to apoapsis.
+
+  Set startAp to apoapsis.
+
+  Until periapsis >= startAp*.99 {
+    If a1 > a0 {
+      If apCloserNode {
+        Set strAng to max(-10, strAng - 0.1).
+      } else {
+        Set strAng to min(10, strAng + 0.1).
+      }
+    } else {
+      If apCloserNode {
+        Set strAng to min(10, strAng + 0.1).
+      } else {
+        Set strAng to max(-10, strAng - 0.1).
+      }
+    }
+    llog(LOG_V, "LL_circularize(strAng: " + 0.1*floor(strAng*10) + ")").
+    Lock steering to Heading(90, strAng).
+    Set a0 to apoapsis.
+    Wait TICK_TIME.
+    Set a1 to apoapsis.
+  }
+  Lock throttle to 0.
+  llog(LOG_V, "LL_circularize(Done.)").
+}
+
 // Alternative to adjusting throttle
 Function LL_setThrustLimit {
   Parameter ename.
@@ -15,15 +76,18 @@ Function LL_setThrustLimit {
 // A hacky-but-decent method for controlling descent speed
 Function LL_lockSpeedUntilAltitude {
   Parameter timeTick.
+  Parameter startThr.
   Parameter targetSpeed.
   Parameter destAlt.
 
   If alt:radar < destAlt {
+    llog(LOG_V, "LL_lockSpeedUntilAltitude(Already below dest alt!)[").
     Return.
   }
 
-  Lock throttle to 0.5.
-  Set thr to 0.5.
+  llog(LOG_V, "LL_lockSpeedUntilAltitude(Speed: " + 0.1*floor(targetSpeed*10) + "m/s Alt: " + 0.1*floor(destAlt*10) + "m").
+  Lock throttle to startThr.
+  Set thr to startThr.
   Set thrustIncr to 0.1.
 
   Set altReached to False.
@@ -53,11 +117,11 @@ Function LL_lockSpeedUntilAltitude {
 
     llog(LOG_VVV, "LL_lockSpeedUntilAltitude(alt:radar)[" + 0.1*floor(alt:radar*10) + "m]").
     llog(LOG_VVV, "LL_lockSpeedUntilAltitude(dest alt)[" + 0.1*floor(destAlt*10) + "m]").
-    llog(LOG_VV, "LL_lockSpeedUntilAltitude(throttle)[" + floor(thr*100) + "%]").
-    llog(LOG_VV, "LL_lockSpeedUntilAltitude(vel)[" + 0.1*floor(ship:velocity:surface:mag*10) + "m/s]").
-    llog(LOG_VV, "LL_lockSpeedUntilAltitude(dest vel)[" + 0.1*floor(targetSpeed*10) + "m/s]").
-    llog(LOG_VV, "LL_lockSpeedUntilAltitude(vert vel)[" + 0.1*floor(ship:verticalspeed*10) + "m/s]").
-    llog(LOG_VV, "LL_lockSpeedUntilAltitude(thrust incr)[" + 0.1*floor(thrustIncr*1000) + "%]").
+    llog(LOG_VVV, "LL_lockSpeedUntilAltitude(throttle)[" + floor(thr*100) + "%]").
+    llog(LOG_VVV, "LL_lockSpeedUntilAltitude(vel)[" + 0.1*floor(ship:velocity:surface:mag*10) + "m/s]").
+    llog(LOG_VVV, "LL_lockSpeedUntilAltitude(dest vel)[" + 0.1*floor(targetSpeed*10) + "m/s]").
+    llog(LOG_VVV, "LL_lockSpeedUntilAltitude(vert vel)[" + 0.1*floor(ship:verticalspeed*10) + "m/s]").
+    llog(LOG_VVV, "LL_lockSpeedUntilAltitude(thrust incr)[" + 0.1*floor(thrustIncr*1000) + "%]").
 
   }
 
@@ -66,6 +130,7 @@ Function LL_lockSpeedUntilAltitude {
 // Launches to parameter height
 Function LL_launchIfLanded {
   Parameter desiredHeight.
+  Parameter doLoop.
 
   if (alt:radar < 30) {
     llog(LOG_V, "LL_launchIfLanded(Launching!)").
@@ -74,6 +139,23 @@ Function LL_launchIfLanded {
       llog(LOG_V, "LL_launchIfLanded(Staging.)").
       Stage.
     }
+
+    Wait 4.
+    If doLoop {
+      llog(LOG_V, "LL_launchIfLanded(A loop?.)").
+      Lock steering to UP + R(0,45,0).
+      Wait 1.
+      Lock steering to UP + R(0,135,0).
+      Wait 1.
+      Lock steering to UP + R(0,225,0).
+      Wait 1.
+      Lock steering to UP + R(0,315,0).
+      Wait 1.
+      Lock steering to UP + R(0,45,0).
+      Wait 1.
+      Lock steering to UP + R(0,0,0).
+    }
+
     Wait until apoapsis > desiredHeight.
     Lock throttle to 0.
     llog(LOG_V, "LL_launchIfLanded(End.)").

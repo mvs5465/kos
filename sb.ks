@@ -2,17 +2,21 @@ run lib_launch_help.
 run lib_math.
 run lib_log.
 
-// Init
-Set LOG_LEVEL to LOG_V.
+Set LOG_LEVEL to LOG_VV.
 
-Set TEST_LAUNCH_HEIGHT to 500. // (m)
+Set TEST_LAUNCH_HEIGHT to 527. // (m)
 Set ENGINE_NAME to "engine". // deprecated, prefer throttle control
-Set TICK_TIME to 0.01. // global tick time (lower = more precise)
+Set TICK_TIME to 0.001. // global tick time (lower = more precise)
 Set ENG_THROTTLEUP_TIME to 0.1. // time it takes engines to throttle 0-->100%
 
 // requires grav sensor (TODO - measure acc?)
 
 main().
+
+/// End ///
+///////////
+
+// Functions
 
 //////////////////
 ////// Main //////
@@ -23,9 +27,10 @@ Function main {
 
   LL_countDown(3).
 
-  Lock steering to UP + R(0,5,0).
+
   Gear off.
-  LL_launchIfLanded(TEST_LAUNCH_HEIGHT).
+  Lock steering to up.
+  LL_launchIfLanded(TEST_LAUNCH_HEIGHT, True).  // flip = true!
 
   Wait until alt:radar < (apoapsis - 5).
   Wait 2.
@@ -46,18 +51,22 @@ Function land {
   Set stoppingSpeed to 2. // (m/s) target speed
 
 
-  llog(LOG_V, "Beginning landing routine.").
+  llog(LOG_V, "Boostback burn...").
   Gear on.
   Lights on.
   Lock steering to SRFRETROGRADE.
 
+  // Boostback loop
   // Basically, brake so that you hit the ground the same time your speed = 0
   Lock throttle to 0.
   Set thr to 0.
   Until alt:radar < stoppingHeight {
-    Set sDist to LM_getStoppingDistance(TICK_TIME).
 
-    If (sDist) < alt:radar {  // TODO - remove this constant
+    // TODO - this coefficient is a 10% error margin (lets get this lower)
+    Set sDist to 1.1*LM_getStoppingDistance(TICK_TIME).
+
+    // TODO - optimize this by adding dynamic thrust increments
+    If sDist < alt:radar {
       Set thr to max(0, thr - 0.1). // TODO - remove this constant
     } else {
       Set thr to min(1, thr + 0.1). // TODO - remove this constant
@@ -66,7 +75,7 @@ Function land {
   }
 
   // Regain control and land
-  LL_lockSpeedUntilAltitude(TICK_TIME, stoppingSpeed, cutPowerHeight).
+  LL_lockSpeedUntilAltitude(TICK_TIME, thr, stoppingSpeed, cutPowerHeight).
   Lock throttle to 0.
   llog(LOG_V, "Landed!").
 }

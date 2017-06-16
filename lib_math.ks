@@ -2,6 +2,16 @@
 // - Helpful collection of math functions
 // -
 
+// Get absolute distance
+Function LM_absDist {
+  Parameter a.
+  Parameter b.
+
+  Return abs(a-b).
+
+
+}
+
 
 // A lot like braking distance, but vertical
 Function LM_getStoppingDistance {
