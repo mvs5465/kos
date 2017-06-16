@@ -1,6 +1,20 @@
 // -
-// - Helpful collection of functions relevant to launching
+// - Helpful collection of functions relevant to general maneuvering
 // -
+
+
+// Returns ship total quantity of a resource
+Function resourcePercent {
+  Parameter resName.
+
+  For res in ship:parts {
+    If res:name = resName {
+      Set resCur to res:amount.
+      Set resMax to res:capacity.
+    }
+  }
+  return (resCur/ResMax)*100.
+}
 
 // Circularizes at closer of periapsis or apoapsis
 Function LL_circularize {
@@ -8,8 +22,6 @@ Function LL_circularize {
   // 2 Wait until closer ETA = 0
   // 3 Burn while keeping closer one at current height (point up/down)
   //   until orbits are within 1%.
-
-  llog(LOG_V, "LL_circularize(W...)").
 
   Lock throttle to 0.
 
@@ -20,45 +32,63 @@ Function LL_circularize {
     Set apCloserNode to true.
     Lock steering to prograde.
     llog(LOG_V, "LL_circularize(Waiting for apoapsis...)").
-    Wait until eta:apoapsis < 1.
+    Wait until eta:apoapsis < 5.
   } else {
     Set apCloserNode to false.
     Lock steering to retrograde.
     llog(LOG_V, "LL_circularize(Waiting for periapsis...)").
-    Wait until eta:periapsis < 1.
+    Wait until eta:periapsis < 5.
   }
-
 
   llog(LOG_V, "LL_circularize(Circularizing...)").
   Lock throttle to 1.
 
-  Set strAng to 0.
-  Set a0 to apoapsis.
-  Wait TICK_TIME.
-  Set a1 to apoapsis.
-
   Set startAp to apoapsis.
+  Set strAng to 0.
+  Set thr to 1.
+  Set cutOffTime to 5. // seconds
+  Set incr to 1.
+  Set cutOffTimePrecise to 3. // seconds
+  Set incrPrecise to 0.1.
+  Until LM_absDist(periapsis, apoapsis)<0.01 {
 
-  Until periapsis >= startAp*.99 {
-    If a1 > a0 {
-      If apCloserNode {
-        Set strAng to max(-10, strAng - 0.1).
-      } else {
-        Set strAng to min(10, strAng + 0.1).
-      }
+    // If ship:verticalspeed > 0 {
+    //   If apCloserNode {
+    //     Set strAng to max(-20, strAng - 0.1).
+    //   } else {
+    //     Set strAng to min(20, strAng + 0.1).
+    //   }
+    // } else {
+    //   If apCloserNode {
+    //     Set strAng to min(20, strAng + 0.1).
+    //   } else {
+    //     Set strAng to max(-20, strAng - 0.1).
+    //   }
+    // }
+
+    // If periapsis > 0 {
+    //   Set cutOffTime to cutOffTimePrecise.
+    //   Set incr to incrPrecise.
+    // }
+
+    // keep apoapsis steady and raise periapsis
+    If eta:apoapsis > cutOffTime {
+      Set thr to max(0, thr - incr).
+      Set strAng to max(-20, strAng - incr).
     } else {
-      If apCloserNode {
-        Set strAng to min(10, strAng + 0.1).
-      } else {
-        Set strAng to max(-10, strAng - 0.1).
-      }
+      Set thr to min(1, thr + incr).
+      Set strAng to min(20, strAng + incr).
     }
-    llog(LOG_V, "LL_circularize(strAng: " + 0.1*floor(strAng*10) + ")").
+    Lock throttle to thr.
     Lock steering to Heading(90, strAng).
-    Set a0 to apoapsis.
+
+    llog(LOG_VVV, "LL_circularize(strAng: " + 0.1*floor(strAng*10) + ")").
+    llog(LOG_VVV, "LL_circularize(thr: " + 0.1*floor(thr*10) + ")").
+
+
     Wait TICK_TIME.
-    Set a1 to apoapsis.
   }
+
   Lock throttle to 0.
   llog(LOG_V, "LL_circularize(Done.)").
 }

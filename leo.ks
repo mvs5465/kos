@@ -1,17 +1,23 @@
-// all in one launch, gravity turn, and circularize script
-
-
 run lib_launch_help.
 run lib_math.
 run lib_log.
 
-// Init and check
+// -
+// - all in one launch, gravity turn, and circularize script
+// -
+
+
 Set LOG_LEVEL to LOG_VV.
-Set LAUNCH_STEEPNESS to 0.13.
+
 Set TARGET_APOAPSIS to 75000.
-Set ETA_MARGIN to 15. // seconds to eta to fire (stronger engines get closer)
-Set TICK_TIME to 0.01.
+Set TICK_TIME to 0.001.
+
+// -
+// - begin
 main().
+// - end
+// -
+
 
 
 //////////////////
@@ -20,9 +26,9 @@ Function main {
   Clearscreen.
   SAS off.
   Lock throttle to 0.
-  Lock steering to Heading(90, 90).
 
   LL_countdown(4).
+  Lock steering to Heading(90, 90).
   Gear off.
   LL_launchIfLanded(1000, FALSE).
   Lock throttle to 1.
@@ -44,19 +50,10 @@ Function main {
   //   }
   // }
 
-  // Gravity turn proportionally until alt = 30km and ang = 10deg
   turnAndBurn().
 
-  // Burn until apoapsis is in space
-  llog(LOG_V, "main: atmospheric exit burn started.").
-  Lock steering to Heading(90,5).
-  Lock throttle to 1.
-  Wait until apoapsis > TARGET_APOAPSIS.
   LL_circularize().
-  llog(LOG_V, "main: Atmospheric exit burn complete.").
-  Lock throttle to 0.
-
-  LL_circularize().
+  llog(LOG_V, "Have a nice day!").
   Lock throttle to 0.
   Set SHIP:CONTROL:PILOTMAINTHROTTLE TO 0.
   SAS on.
@@ -85,17 +82,4 @@ Function turnAndBurn {
     Lock steering to Heading(90, curAng).
     Wait TICK_TIME.
   }
-}
-
-Function resourcePercent {
-  Parameter resName.
-
-  Set resList to ship:parts. //partsdubbed(resName)[0]:resources.
-  For res in resList {
-    If res:name = resName {
-      Set resCur to res:amount.
-      Set resMax to res:capacity.
-    }
-  }
-  return (resCur/ResMax)*100.
 }

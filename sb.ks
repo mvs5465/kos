@@ -2,6 +2,11 @@ run lib_launch_help.
 run lib_math.
 run lib_log.
 
+// -
+// - boostback burn script
+// - requires grav sensor (TODO - measure acc?)
+// -
+
 Set LOG_LEVEL to LOG_VV.
 
 Set TEST_LAUNCH_HEIGHT to 527. // (m)
@@ -9,14 +14,13 @@ Set ENGINE_NAME to "engine". // deprecated, prefer throttle control
 Set TICK_TIME to 0.001. // global tick time (lower = more precise)
 Set ENG_THROTTLEUP_TIME to 0.1. // time it takes engines to throttle 0-->100%
 
-// requires grav sensor (TODO - measure acc?)
-
+// -
+// - begin
 main().
+// - end
+// -
 
-/// End ///
-///////////
 
-// Functions
 
 //////////////////
 ////// Main //////
