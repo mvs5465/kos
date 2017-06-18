@@ -7,9 +7,11 @@ run lib_log.
 // - requires grav sensor (TODO - measure acc?)
 // -
 
-Set LOG_LEVEL to LOG_VV.
-
-Set TEST_LAUNCH_HEIGHT to 527. // (m)
+Set LOG_LEVEL to LOG_V.
+Set CONTROLLER_HEIGHT_OFFSET to 5.06. // height of ship
+Set DO_LOOP to false.
+Set LAUNCH_ANGLE to 35. // degrees
+Set TEST_LAUNCH_HEIGHT to 5800. // (m)
 Set ENGINE_NAME to "engine". // deprecated, prefer throttle control
 Set TICK_TIME to 0.001. // global tick time (lower = more precise)
 Set ENG_THROTTLEUP_TIME to 0.1. // time it takes engines to throttle 0-->100%
@@ -33,10 +35,12 @@ Function main {
 
 
   Gear off.
-  Lock steering to up.
-  LL_launchIfLanded(TEST_LAUNCH_HEIGHT, True).  // flip = true!
+  Lock steering to UP + R(0,LAUNCH_ANGLE,0).
+  LL_launchIfLanded(TEST_LAUNCH_HEIGHT, DO_LOOP).
 
-  Wait until alt:radar < (apoapsis - 5).
+  Wait until ship:verticalspeed < 10.
+  Lock steering to SRFRETROGRADE.
+  Wait until ship:verticalspeed < -1.
   Wait 2.
   land().
   llog(LOG_V, "Have a nice day!").
@@ -50,33 +54,47 @@ Function main {
 // ~works half the time, all the time~
 Function land {
 
-  Set stoppingHeight to 35. // (m) height to switch to static-speed descent
-  Set cutPowerHeight to 5. // (m) note the landing pad is ~12m tall
-  Set stoppingSpeed to 2. // (m/s) target speed
+  Set stoppingHeight to 35 + CONTROLLER_HEIGHT_OFFSET. // (m) height to switch to static-speed descent
+  Set cutPowerHeight to 1 + CONTROLLER_HEIGHT_OFFSET. // (m) note the landing pad is ~12m tall
+  Set stoppingSpeed to 1. // (m/s) target speed
 
 
   llog(LOG_V, "Boostback burn...").
   Gear on.
   Lights on.
-  Lock steering to SRFRETROGRADE.
 
   // Boostback loop
   // Basically, brake so that you hit the ground the same time your speed = 0
   Lock throttle to 0.
   Set thr to 0.
+  Set sDist to LM_totalBoostbackDistance().
+  Set adjustedDistance to dist.
+  Wait TICK_TIME.
   Until alt:radar < stoppingHeight {
 
-    // TODO - this coefficient is a 10% error margin (lets get this lower)
-    Set sDist to 1.1*LM_getStoppingDistance(TICK_TIME).
+     // try to determine and factor in error margin
+    Set sDistOld to sDist.
+    Set sDist to LM_totalBoostbackDistance().
+    Set errMgn to abs(sDist - sDistOld).
+    Set adjustedDistance to (LM_totalBoostbackDistance() + errMgn + CONTROLLER_HEIGHT_OFFSET).
 
-    // TODO - optimize this by adding dynamic thrust increments
-    If sDist < alt:radar {
-      Set thr to max(0, thr - 0.1). // TODO - remove this constant
+    llog(LOG_VV, "Stop dist:    " + 0.01*floor(sDist*100) + "m").
+    llog(LOG_VV, "Error margin: " + 0.01*floor(errMgn*100) + "m").
+    llog(LOG_VV, "Alt:          " + 0.01*floor(alt:radar*100) + "m").
+
+     // TODO - replace with pidloop
+    If  alt:radar < adjustedDistance {
+      Set thr to max(1, thr + thr*1.33).
     } else {
-      Set thr to min(1, thr + 0.1). // TODO - remove this constant
+      Set sDist to min(alt:radar, sDist).
+      Set thr to min(0.01, thr - thr*1.33).
     }
+
     Lock throttle to thr.
+    Wait TICK_TIME.
   }
+  llog(LOG_V, "Missed by "
+    + 0.1*abs(floor((adjustedDistance - alt:radar)*10)) + "m").
 
   // Regain control and land
   LL_lockSpeedUntilAltitude(TICK_TIME, thr, stoppingSpeed, cutPowerHeight).

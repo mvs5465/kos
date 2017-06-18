@@ -50,7 +50,22 @@ Function LL_circularize {
   Set incr to 1.
   Set cutOffTimePrecise to 3. // seconds
   Set incrPrecise to 0.1.
-  Until LM_absDist(periapsis, apoapsis)<0.01 {
+
+  Set criticalAngle to 0.
+
+  Set vel0 to ship:verticalspeed.
+  Wait TICK_TIME.
+  Set vel1 to ship:verticalspeed.
+  Set acc to (vel1 - vel0)/TICK_TIME.
+  Set apOld to apoapsis.
+  Set perOld to periapsis.
+  Wait TICK_TIME.
+  Set startAp to apoapsis.
+
+  Set nodesSwitched to false.
+  Until nodesSwitched = true {
+
+
 
     // If ship:verticalspeed > 0 {
     //   If apCloserNode {
@@ -72,12 +87,24 @@ Function LL_circularize {
     // }
 
     // keep apoapsis steady and raise periapsis
-    If eta:apoapsis > cutOffTime {
-      Set thr to max(0, thr - incr).
-      Set strAng to max(-20, strAng - incr).
+    Set vel1 to ship:verticalspeed.
+    Set accOld to acc.
+    Set acc to (vel1 - vel0)/TICK_TIME.
+
+
+
+    // Use change in altitude (verticalspeed) to adjust throttle
+    // Use change in verticalspeed (acceleration) to adjust pitch
+    If ship:verticalspeed > 0 {
+        Set thr to max(0, thr - abs(abs(accOld) - abs(acc)*0.1)).
     } else {
-      Set thr to min(1, thr + incr).
-      Set strAng to min(20, strAng + incr).
+        Set thr to min(1, thr + abs(abs(accOld) - abs(acc)*0.1)).
+    }
+
+    If abs(accOld) > abs(acc) {
+      Set strAng to max(-20, strAng - 0.1).
+    } else {
+      Set strAng to min(20, strAng + 0.1).
     }
     Lock throttle to thr.
     Lock steering to Heading(90, strAng).
@@ -87,6 +114,14 @@ Function LL_circularize {
 
 
     Wait TICK_TIME.
+    Set dApoapsis to abs(apOld - apoapsis)/TICK_TIME.
+    Set dPeriapsis to abs(perOld - periapsis)/TICK_TIME.
+    Set apOld to apoapsis.
+    Set perOld to periapsis.
+
+    If (dApoapsis > dPeriapsis) and (periapsis > apoapsis*.9) {
+      Set nodesSwitched to true.
+    }
   }
 
   Lock throttle to 0.
@@ -190,7 +225,7 @@ Function LL_launchIfLanded {
     Lock throttle to 0.
     llog(LOG_V, "LL_launchIfLanded(End.)").
   } else {
-    llog(LOG_V, "LL_launchIfLanded(Low altitude, not launching.)").
+    llog(LOG_V, "LL_launchIfLanded(Skipping launch.)").
   }
 
 }
