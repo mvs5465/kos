@@ -1,5 +1,5 @@
 // -
-// - Autopilot routine (for rovers)
+// - Autopilot routine (for planes)
 // -
 
 Set TICK_TIME to 0.01.
