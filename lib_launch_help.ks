@@ -62,6 +62,8 @@ Function LL_circularize {
   Wait TICK_TIME.
   Set startAp to apoapsis.
 
+  Set startAP to apoapsis.
+
   Set nodesSwitched to false.
   Until nodesSwitched = true {
 
@@ -102,9 +104,9 @@ Function LL_circularize {
     }
 
     If abs(accOld) > abs(acc) {
-      Set strAng to max(-20, strAng - 0.1).
+      Set strAng to max(-10, strAng - 0.1).
     } else {
-      Set strAng to min(20, strAng + 0.1).
+      Set strAng to min(10, strAng + 0.1).
     }
     Lock throttle to thr.
     Lock steering to Heading(90, strAng).
@@ -119,7 +121,7 @@ Function LL_circularize {
     Set apOld to apoapsis.
     Set perOld to periapsis.
 
-    If (dApoapsis > dPeriapsis) and (periapsis > apoapsis*.9) {
+    If ((dApoapsis > dPeriapsis) AND (periapsis > apoapsis*.9)) OR (apoapsis > startAP*1.1) {
       Set nodesSwitched to true.
     }
   }
@@ -197,7 +199,7 @@ Function LL_launchIfLanded {
   Parameter desiredHeight.
   Parameter doLoop.
 
-  if (alt:radar < 30) {
+  if (alt:radar < 100) {
     llog(LOG_V, "LL_launchIfLanded(Launching!)").
     Lock throttle to 1.
     If stage:liquidfuel < 0.1 {

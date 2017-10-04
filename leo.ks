@@ -9,7 +9,7 @@ run lib_log.
 
 Set LOG_LEVEL to LOG_VV.
 
-Set TARGET_APOAPSIS to 75000.
+Set TARGET_APOAPSIS to 76000.
 Set TICK_TIME to 0.001.
 
 // -
