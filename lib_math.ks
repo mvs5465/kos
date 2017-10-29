@@ -2,6 +2,20 @@
 // - Helpful collection of math functions
 // -
 
+// Returns max TWR
+Function LM_maxThrustWeightRatio {
+  // TWR = Fup / Fdown
+  //     = Thrust / m * a
+
+  // ship:maxthrust returns kilonewtons
+  // ship:mass returns metric ton (1000 kg)
+  // 9.81 = force of gravity on Kerbin at sea level
+
+  Set twr to (ship:maxthrust / (ship:mass/1000 * 9.81)/1000).
+  llog(LOG_V, "LM_maxThrustWeightRatio(TWR)[" + 0.1*floor(twr*10) + "]").
+  Return twr.
+}
+
 // Theoretical braking altitude
 Function LM_totalBoostbackDistance {
 

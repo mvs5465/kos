@@ -79,6 +79,7 @@ Function turnAndBurn {
   Until apoapsis > TARGET_APOAPSIS {
     llog(LOG_VVV,"turnAndBurn: curAng " + 0.1*floor(curAng*10)).
     Set curAng to -sqrt(cIdeal*(altitude + 1000)) + 90.
+    Lock throttle to 2/(LM_maxThrustWeightRatio()).
     Lock steering to Heading(90, curAng).
     Wait TICK_TIME.
   }
