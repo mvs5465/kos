@@ -18,6 +18,7 @@ Function resourcePercent {
 
 // Circularizes at closer of periapsis or apoapsis
 Function LL_circularize {
+  Parameter destHeading.
   // 1 Detect if we are closer to periapsis or apoapsis
   // 2 Wait until closer ETA = 0
   // 3 Burn while keeping closer one at current height (point up/down)
@@ -32,12 +33,12 @@ Function LL_circularize {
     Set apCloserNode to true.
     Lock steering to prograde.
     llog(LOG_V, "LL_circularize(Waiting for apoapsis...)").
-    Wait until eta:apoapsis < 5.
+    Wait until eta:apoapsis < 10.
   } else {
     Set apCloserNode to false.
     Lock steering to retrograde.
     llog(LOG_V, "LL_circularize(Waiting for periapsis...)").
-    Wait until eta:periapsis < 5.
+    Wait until eta:periapsis < 10.
   }
 
   llog(LOG_V, "LL_circularize(Circularizing...)").
@@ -65,6 +66,7 @@ Function LL_circularize {
   Set startAP to apoapsis.
 
   Set nodesSwitched to false.
+
   Until nodesSwitched = true {
 
 
@@ -89,27 +91,95 @@ Function LL_circularize {
     // }
 
     // keep apoapsis steady and raise periapsis
+
+
+
     Set vel1 to ship:verticalspeed.
     Set accOld to acc.
     Set acc to (vel1 - vel0)/TICK_TIME.
 
 
 
+    // Measure apoapsis acceleration and use that to adjust pitch
+    Set apsPos0 to startAp.
+
+    Set apsPos1 to apoapsis.
+    Set apsVel0 to apoapsis - startAp.
+
+    Set apsPos2 to apoapsis.
+    Set apsVel1 to apoapsis - apsPos2.
+
+    Set apsVertAcc to apsVel1 - apsVel0.
+
+
+
     // Use change in altitude (verticalspeed) to adjust throttle
     // Use change in verticalspeed (acceleration) to adjust pitch
-    If ship:verticalspeed > 0 {
-        Set thr to max(0, thr - abs(abs(accOld) - abs(acc)*0.1)).
+    //If ship:verticalspeed > 0 {
+    // If abs(accOld) > abs(acc) {
+    //     Set thr to max(0, thr - abs(abs(accOld) - abs(acc)*0.1)).
+    // } else {
+    //     Set thr to min(1, thr + abs(abs(accOld) - abs(acc)*0.1)).
+    // }
+
+    // Old attempt at handling all cases (suffer from locking at some positive speed problem)
+    // If apsVel1 > 0  AND apsVertAcc > -0.3 {
+    //   Set strAng to max(-10, strAng - 0.1).
+    // } else if apsVel1 > 0  AND apsVertAcc < -0.3 {
+    //   Set strAng to min(10, strAng + 0.1).
+    // } else if apsVel1 < 0  AND apsVertAcc < -0.3 {
+    //   Set strAng to max(-10, strAng - 0.1).
+    // } else {
+    //   Set strAng to min(10, strAng + 0.1).
+    // }
+
+    // If apsVel1 > 0 {
+    //   Set strAng to max(-10, strAng - 0.1).
+    // } else {
+    //   Set strAng to min(10, strAng + 0.1).
+    // }
+
+    // Commented 10/4/18
+    // If acc > 0 {
+    //   Set strAng to max(-20, strAng - 0.1).
+    // } else {
+    //   Set strAng to min(30, strAng + 0.1).
+    // }
+
+    // If ship:verticalspeed > 0 {
+    //   Set thr to max(0.1, thr - 0.5).
+    // } else {
+    //   Set thr to min(1, thr + 0.5).
+    // }
+
+    // 10/5/18
+    // If ship:verticalspeed > 0 {
+    //   Set strAng to max(-20, -(abs(ship:verticalspeed)/10)).
+    // } else {
+    //   Set strAng to min(20, (abs(ship:verticalspeed)/10)).
+    // }
+
+    // Make time to apoapsis get closer to 0 as periapsis approaches apoapsis
+
+    // Hold eta:apoapsis to 5 seconds
+    If (eta:apoapsis > 5) AND (eta:apoapsis < eta:periapsis) {
+      Set strAng to max(-1, strAng-sqrt(abs(0.1*floor((eta:apoapsis - 5)*10)))).
     } else {
-        Set thr to min(1, thr + abs(abs(accOld) - abs(acc)*0.1)).
+      Set strAng to min(20, strAng+sqrt(abs(0.1*floor((eta:apoapsis - 5)*10)))).
     }
 
-    If abs(accOld) > abs(acc) {
-      Set strAng to max(-10, strAng - 0.1).
-    } else {
-      Set strAng to min(10, strAng + 0.1).
-    }
-    Lock throttle to thr.
-    Lock steering to Heading(90, strAng).
+    // Old attempt at handling all cases (suffer from locking at some positive speed problem)
+    // If ship:verticalspeed > -0.3 AND acc > 0 {
+    //   Set thr to max(0.1, thr - abs(abs(accOld) - abs(acc)*0.1)).
+    // } else if ship:verticalspeed > -0.3 and acc < 0 {
+    //   Set thr to min(1, thr + abs(abs(accOld) - abs(acc)*0.1)).
+    // } else if ship:verticalspeed < -0.3 and acc < 0 {
+    //   Set thr to max(0.1, thr - abs(abs(accOld) - abs(acc)*0.1)).
+    // } else {
+    //   Set thr to min(1, thr + abs(abs(accOld) - abs(acc)*0.1)).
+    // }
+    //Lock throttle to thr.
+    Lock steering to Heading(destHeading, strAng).
 
     llog(LOG_VVV, "LL_circularize(strAng: " + 0.1*floor(strAng*10) + ")").
     llog(LOG_VVV, "LL_circularize(thr: " + 0.1*floor(thr*10) + ")").
@@ -201,11 +271,13 @@ Function LL_launchIfLanded {
 
   if (alt:radar < 100) {
     llog(LOG_V, "LL_launchIfLanded(Launching!)").
-    Lock throttle to 1.
+    Lock throttle to 0.
     If stage:liquidfuel < 0.1 {
       llog(LOG_V, "LL_launchIfLanded(Staging.)").
       Stage.
     }
+
+    Lock throttle to 2.5/(LM_maxThrustWeightRatio()).
 
     Wait 4.
     If doLoop {
@@ -224,6 +296,7 @@ Function LL_launchIfLanded {
     }
 
     Wait until apoapsis > desiredHeight.
+
     Lock throttle to 0.
     llog(LOG_V, "LL_launchIfLanded(End.)").
   } else {

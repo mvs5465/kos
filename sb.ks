@@ -8,10 +8,10 @@ run lib_log.
 // -
 
 Set LOG_LEVEL to LOG_V.
-Set CONTROLLER_HEIGHT_OFFSET to 5.06. // height of ship
-Set DO_LOOP to false.
+Set CONTROLLER_HEIGHT_OFFSET to 2. // height of ship
+Set DO_LOOP to true.
 Set LAUNCH_ANGLE to 35. // degrees
-Set TEST_LAUNCH_HEIGHT to 5800. // (m)
+Set TEST_LAUNCH_HEIGHT to 700. // (m)
 Set ENGINE_NAME to "engine". // deprecated, prefer throttle control
 Set TICK_TIME to 0.001. // global tick time (lower = more precise)
 Set ENG_THROTTLEUP_TIME to 0.1. // time it takes engines to throttle 0-->100%

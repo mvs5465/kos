@@ -11,8 +11,8 @@ main().
 
 
 Function main {
-  Set startSpeed to ship:velocity:surface:mag.
-  Print "Cruise control activated: " + 0.1*floor(ship:velocity:surface:mag*10) + "m/s".
+  Set startSpeed to 45.//ship:velocity:surface:mag.
+  Print "Cruise control activated: " + 0.1*floor(startSpeed*10) + "m/s".
 
   Lock steering to ship:facing.
 

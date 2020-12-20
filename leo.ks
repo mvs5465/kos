@@ -9,8 +9,19 @@ run lib_log.
 
 Set LOG_LEVEL to LOG_VV.
 
-Set TARGET_APOAPSIS to 76000.
+// orbit angles
+// north: 0
+// east: 90 (default)
+// south: 180
+// west: 270
+Set ORBIT_ANGLE to 90.
+
+// orbit heights
+// kerbin space altitude: 70000
+// kerbin geostationary orbit 2863330
+Set TARGET_APOAPSIS to 75000.
 Set TICK_TIME to 0.001.
+
 
 // -
 // - begin
@@ -28,7 +39,7 @@ Function main {
   Lock throttle to 0.
 
   LL_countdown(4).
-  Lock steering to Heading(90, 90).
+  Lock steering to Heading(ORBIT_ANGLE, 90).
   Gear off.
   LL_launchIfLanded(1000, FALSE).
   Lock throttle to 1.
@@ -52,7 +63,7 @@ Function main {
 
   turnAndBurn().
 
-  LL_circularize().
+  LL_circularize(ORBIT_ANGLE).
   llog(LOG_V, "Have a nice day!").
   Lock throttle to 0.
   Set SHIP:CONTROL:PILOTMAINTHROTTLE TO 0.
@@ -63,12 +74,18 @@ Function main {
 /// Functions ///
 Function turnAndBurn {
 
+  If apoapsis > TARGET_APOAPSIS {
+      llog(LOG_V,"turnAndBurn: Skipping routine, apoapsis (" + apoapsis + ") greater than target apoapsis (" + TARGET_APOAPSIS + ")").
+      Return.
+  }
+
   //// Ideal angle formula:
   // A = sqrt(C*(TA + 1000) + 90)
   // Cideal = (0^2 - 90)/(TA + 1000)
   // Cideal = (-90)/(TA + 1000)
   /// then
   // A = sqrt(Cideal*(TA + 1000) + 90)
+
 
   llog(LOG_V,"turnAndBurn: Gravity turning until " + TARGET_APOAPSIS/1000 + "km").
 
@@ -79,8 +96,8 @@ Function turnAndBurn {
   Until apoapsis > TARGET_APOAPSIS {
     llog(LOG_VVV,"turnAndBurn: curAng " + 0.1*floor(curAng*10)).
     Set curAng to -sqrt(cIdeal*(altitude + 1000)) + 90.
-    Lock throttle to 2/(LM_maxThrustWeightRatio()).
-    Lock steering to Heading(90, curAng).
+    Lock throttle to (2+(2*altitude/TARGET_APOAPSIS))/LM_maxThrustWeightRatio().
+    Lock steering to Heading(ORBIT_ANGLE, curAng).
     Wait TICK_TIME.
   }
 }
